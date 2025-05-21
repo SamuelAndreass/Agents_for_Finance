@@ -1,0 +1,16 @@
+fundamental_task:
+  description: Conduct a fundamental financial analysis of the company identified by the ticker "{company_ticker}". Focus on profitability, financial ratios, and growth.
+  expected_output: A structured report on financial ratios, income statements, balance sheets, growth trends, and valuation.
+
+technical_task:
+  description: Conduct a technical analysis for the stock identified by the ticker "{stock_symbol}" over the period "{period}".
+  expected_output: A report of technical indicators including trend, momentum, volume behavior, and trading signals for the stock.
+
+
+macro_task:
+  description: Perform a macroeconomic analysis using the input "{input}". This input may be a country name or a company ticker which will be resolved to a country.
+  expected_output: Summary of GDP, inflation, and unemployment data for {input}, including historical trends and economic interpretation.
+
+conversation_task:
+  description: Respond to general financial questions or casual inquiries that don’t match a specific analytical task.
+  expected_output: Helpful and polite responses that maintain engagement or guide the user to more specific questions.
