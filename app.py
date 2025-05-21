@@ -1,5 +1,6 @@
-import streamlit as st
 import os
+os.environ["CREWAI_DEFAULT_VECTOR_STORE"] = "disabled"
+import streamlit as st
 import warnings
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
@@ -13,7 +14,6 @@ import re
 import yfinance as yf
 from tools.macroeconom_analysis import MacroeconomicTool
 # Load environment variables
-load_dotenv()
 
 # ========== Streamlit Config ==========
 st.set_page_config(page_title="Financial Chatbot", page_icon="💬", layout="wide")
