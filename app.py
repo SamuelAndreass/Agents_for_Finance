@@ -1,5 +1,4 @@
-import os
-os.environ["CREWAI_DEFAULT_VECTOR_STORE"] = "disabled"
+import startup_env_patch
 import streamlit as st
 import warnings
 from datetime import datetime, timedelta

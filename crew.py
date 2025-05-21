@@ -1,5 +1,4 @@
-import os
-os.environ["CREWAI_DEFAULT_VECTOR_STORE"] = "disabled"
+import startup_env_patch
 from crewai import Agent, Crew, Task, Process
 from tools.fundamental_analysis import FundamentalAnalysisTool
 from tools.technical_analysis import TechnicalAnalysisTool
