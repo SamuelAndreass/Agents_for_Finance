@@ -63,7 +63,9 @@ class MacroeconomicTool(BaseTool):
     def get_macro_data(self, series_code: str) -> pd.DataFrame:
         url = f"https://www.econdb.com/api/series/{series_code}/?token=6c2b3a95a441987ce777a9133aa601d957d4be35&format=csv"
         df = pd.read_csv(url, index_col='Date', parse_dates=['Date'])
-        df = df.last('5YE')
+        end = pd.Timestamp.today()
+        start = end - pd.DateOffset(years=5)
+        df = df.loc[start:end]
         return df
 
     def _run(self, description: str) -> dict:
