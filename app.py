@@ -91,7 +91,7 @@ class GenericChatAgent:
         self.history.append({"role": "user", "content": user_prompt})
         try:
             response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4o",
                 messages=self.history,
             )
             reply = response.choices[0].message.content
