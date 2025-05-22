@@ -1,57 +1,38 @@
-import sys
-import pysqlite3
-sys.modules["sqlite3"] = pysqlite3
+__import__('pysqlite3')
+import os
 import streamlit as st
 import warnings
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import yaml
 import json
-import openai
 from openai import OpenAI
 from crew import FinancialCrew
+import openai
 from crewai import Crew, Process
 import re
 import yfinance as yf
 from tools.macroeconom_analysis import MacroeconomicTool
+# Load environment variables
 
 # ========== Streamlit Config ==========
 st.set_page_config(page_title="Financial Chatbot", page_icon="💬", layout="wide")
 warnings.filterwarnings("ignore")
+
 # ========== Helper Functions ==========
+
 def load_agent_configs(config_path="./config/agents.yaml"):
     try:
         with open(config_path, 'r') as f:
-            data = yaml.safe_load(f)
-            if not data:
-                raise ValueError("YAML loaded but empty or invalid structure.")
-            return data
+            return yaml.safe_load(f)
     except Exception as e:
         st.error(f"Error loading agent configs: {e}")
         return None
 
-def test_api_key(key: str):
-    try:
-        client = openai.OpenAI(api_key=key)
-        models = client.models.list()
-        print("✅ API key valid. Available models:")
-        for model in models.data[:3]:  # tampilkan sebagian saja
-            print("-", model.id)
-        return True
-    except Exception as e:
-        print("❌ Invalid API key or connection error:", str(e))
-        return False
-
-
 def is_valid_openai_key(api_key: str) -> bool:
-    client = openai.OpenAI(api_key=api_key)
-    print(test_api_key(api_key))
     try:
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": "Say hello"}],
-            max_tokens=1
-        )
+        client = openai.OpenAI(api_key=api_key)
+        _ = client.models.list()
         return True
     except Exception as e:
         print("[API KEY INVALID]", str(e))
@@ -65,41 +46,43 @@ if "api_key" not in st.session_state:
 if not st.session_state.authenticated:    
     st.title("💬 Financial Assistant")
     st.warning("We don't save any of your API key. It is only saved in current session", icon="⚠️")
-    st.session_state.api_key = st.text_input("API Key", type="password")
-    if st.button("Continue"):
-        if st.session_state.api_key.startswith("sk-") and len(st.session_state.api_key) > 20:
-            if is_valid_openai_key(st.session_state.api_key):
+    if not st.session_state.authenticated:
+        st.session_state.api_key = st.text_input("API Key", type="password")
+        if st.button("Continue"):
+            if st.session_state.api_key.startswith("sk-") and len(st.session_state.api_key) > 20 and is_valid_openai_key(st.session_state.api_key):
                 st.session_state.authenticated = True
+                os.environ["OPENAI_API_KEY"] = st.session_state.api_key
                 st.success("Your API Key is valid. Redirecting to main page...")
                 st.rerun()
             else:
-                st.error("The API key is not valid. Please check it again.")
-        else:
-            st.error("Your API key format is invalid.")
+                st.error("Your API key is not valid. input OPEN API key with 'sk-'.")
+
+        st.stop()
+
 
 class GenericChatAgent:
     def __init__(self, agent_config, api_key=None):
         self.agent_config = agent_config
         self.api_key = api_key
-        self.system_prompt = f"Role: {agent_config.get('role', '')}\nGoal: {agent_config.get('goal', '')}\nBackstory: {agent_config.get('backstory', '')}\nInstructions: {agent_config.get('prompt', '')}"
+        self.system_prompt = f"Role: {agent_config.get('role', '')}\\nGoal: {agent_config.get('goal', '')}\\nBackstory: {agent_config.get('backstory', '')}\\nInstructions: {agent_config.get('prompt', '')}"
         self.history = [{"role": "system", "content": self.system_prompt}]
-        self.client = OpenAI(api_key=self.api_key)  # ✅ gunakan client modern
 
     def query(self, user_prompt):
         if not user_prompt:
-            return "Ask something..."
+            return "Ask someting..."
+        client = OpenAI(api_key=self.api_key)
         self.history.append({"role": "user", "content": user_prompt})
         try:
-            response = self.client.chat.completions.create(
-                model="gpt-4o",
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
                 messages=self.history,
             )
             reply = response.choices[0].message.content
         except Exception as e:
             reply = f"Error: {str(e)}"
+
         self.history.append({"role": "assistant", "content": reply})
         return reply
-
 
 def initialize_agent(agent_name, agent_configs, api_key):
     if agent_configs and agent_name in agent_configs:
@@ -133,9 +116,9 @@ if "main_conversational_agent" not in st.session_state:
     st.session_state.main_conversational_agent = initialize_agent("conversational_agent", configs, api_key)
 
 # Cache CrewAI object
-def get_crew(api_key):
+def get_crew():
     return FinancialCrew(api_key=api_key)
-crew = get_crew(api_key)
+crew = get_crew()
 
 # ========== Check Ticker ==========
 def is_valid_ticker(company_ticker):
@@ -274,17 +257,8 @@ def is_error_message(report):
 def handle_user_query(crew, prompt, chat_history):
     # Step 1: Detect intent
     intent_output = st.session_state.intent_router_agent.query(prompt)
-    print("[INTENT OUTPUT RAW]", repr(intent_output))  # tampilkan string mentah
-    if st.sidebar.checkbox("Show Debug Panel", value=True):
-       st.sidebar.subheader("Debug Info")
-       st.sidebar.json({
-            "Prompt": prompt,
-            "Intent Output (raw)": intent_output,
-            "Agent Configs": st.session_state.agent_configs,
-            "Router Agent Exists": st.session_state.intent_router_agent is not None,
-            "API Key": is_valid_openai_key(st.session_state.api_key)
-        })
-
+    print("=== INTENT DETECTED ===")
+    print(intent_output)
     try:
         intent_data = json.loads(intent_output)
         if "intent" not in intent_data or "entities" not in intent_data:
@@ -360,10 +334,8 @@ with st.expander("ℹ️Disclaimerℹ️"):
                 
         ### ⚠️ DISCLAIMER ⚠️ :
         The analysis is not 100% correct, DYOR (Do your own research)
+        
     ''')
-    
-
-
 
 
 timeout_minutes = 30
