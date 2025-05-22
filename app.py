@@ -339,7 +339,11 @@ with st.expander("ℹ️Disclaimerℹ️"):
         
     ''')
 
-
+if st.sidebar.checkbox("Show Debug Panel"):
+    st.sidebar.subheader("Agent Configs")
+    st.sidebar.json(configs)
+    st.sidebar.subheader("API Key")
+    st.sidebar.write(api_key)
 timeout_minutes = 30
 now = datetime.now()
 if now - st.session_state.last_interaction > timedelta(minutes=timeout_minutes):
