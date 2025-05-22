@@ -1,25 +1,21 @@
 import sys
-import pysqlite3
-sys.modules["sqlite3"] = pysqlite3
 import streamlit as st
 import warnings
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import yaml
 import json
+import openai
 from openai import OpenAI
 from crew import FinancialCrew
-import openai
 from crewai import Crew, Process
 import re
 import yfinance as yf
 from tools.macroeconom_analysis import MacroeconomicTool
-# Load environment variables
 
 # ========== Streamlit Config ==========
 st.set_page_config(page_title="Financial Chatbot", page_icon="💬", layout="wide")
 warnings.filterwarnings("ignore")
-
 # ========== Helper Functions ==========
 def load_agent_configs(config_path="./config/agents.yaml"):
     try:
@@ -32,12 +28,26 @@ def load_agent_configs(config_path="./config/agents.yaml"):
         st.error(f"Error loading agent configs: {e}")
         return None
 
-def is_valid_openai_key(api_key: str) -> bool:
+def test_api_key(key: str):
     try:
-        client = OpenAI(api_key=api_key)
-        _ = client.chat.completions.create(
+        client = openai.OpenAI(api_key=key)
+        models = client.models.list()
+        print("✅ API key valid. Available models:")
+        for model in models.data[:3]:  # tampilkan sebagian saja
+            print("-", model.id)
+        return True
+    except Exception as e:
+        print("❌ Invalid API key or connection error:", str(e))
+        return False
+
+
+def is_valid_openai_key(api_key: str) -> bool:
+    client = openai.OpenAI(api_key=api_key)
+    print(test_api_key(api_key))
+    try:
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": "ping"}],
+            messages=[{"role": "user", "content": "Say hello"}],
             max_tokens=1
         )
         return True
@@ -53,44 +63,41 @@ if "api_key" not in st.session_state:
 if not st.session_state.authenticated:    
     st.title("💬 Financial Assistant")
     st.warning("We don't save any of your API key. It is only saved in current session", icon="⚠️")
-    if not st.session_state.authenticated:
-        st.session_state.api_key = st.text_input("API Key", type="password")
-        if st.button("Continue"):
-            if st.session_state.api_key.startswith("sk-") and len(st.session_state.api_key) > 20:
-                if is_valid_openai_key(st.session_state.api_key):  # <- tambahkan pengecekan valid API
-                    st.session_state.authenticated = True
-                    st.success("Your API Key is valid. Redirecting to main page...")
-                    st.rerun()
-                else:
-                    st.error("The API key is not valid. Please check it again.")
+    st.session_state.api_key = st.text_input("API Key", type="password")
+    if st.button("Continue"):
+        if st.session_state.api_key.startswith("sk-") and len(st.session_state.api_key) > 20:
+            if is_valid_openai_key(st.session_state.api_key):
+                st.session_state.authenticated = True
+                st.success("Your API Key is valid. Redirecting to main page...")
+                st.rerun()
             else:
-                st.error("Your API key format is invalid.")
-
-
+                st.error("The API key is not valid. Please check it again.")
+        else:
+            st.error("Your API key format is invalid.")
 
 class GenericChatAgent:
     def __init__(self, agent_config, api_key=None):
         self.agent_config = agent_config
         self.api_key = api_key
-        self.system_prompt = f"Role: {agent_config.get('role', '')}\\nGoal: {agent_config.get('goal', '')}\\nBackstory: {agent_config.get('backstory', '')}\\nInstructions: {agent_config.get('prompt', '')}"
+        self.system_prompt = f"Role: {agent_config.get('role', '')}\nGoal: {agent_config.get('goal', '')}\nBackstory: {agent_config.get('backstory', '')}\nInstructions: {agent_config.get('prompt', '')}"
         self.history = [{"role": "system", "content": self.system_prompt}]
+        self.client = OpenAI(api_key=self.api_key)  # ✅ gunakan client modern
 
     def query(self, user_prompt):
         if not user_prompt:
-            return "Ask someting..."
-        client = OpenAI(api_key=self.api_key)
+            return "Ask something..."
         self.history.append({"role": "user", "content": user_prompt})
         try:
-            response = client.chat.completions.create(
+            response = self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=self.history,
             )
             reply = response.choices[0].message.content
         except Exception as e:
             reply = f"Error: {str(e)}"
-
         self.history.append({"role": "assistant", "content": reply})
         return reply
+
 
 def initialize_agent(agent_name, agent_configs, api_key):
     if agent_configs and agent_name in agent_configs:
@@ -265,6 +272,7 @@ def is_error_message(report):
 def handle_user_query(crew, prompt, chat_history):
     # Step 1: Detect intent
     intent_output = st.session_state.intent_router_agent.query(prompt)
+    print("[INTENT OUTPUT RAW]", repr(intent_output))  # tampilkan string mentah
     if st.sidebar.checkbox("Show Debug Panel", value=True):
        st.sidebar.subheader("Debug Info")
        st.sidebar.json({
@@ -272,10 +280,9 @@ def handle_user_query(crew, prompt, chat_history):
             "Intent Output (raw)": intent_output,
             "Agent Configs": st.session_state.agent_configs,
             "Router Agent Exists": st.session_state.intent_router_agent is not None,
-            "API Key": st.session_state.api_key
+            "API Key": is_valid_openai_key(st.session_state.api_key)
         })
 
-        
     try:
         intent_data = json.loads(intent_output)
         if "intent" not in intent_data or "entities" not in intent_data:
