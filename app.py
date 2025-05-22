@@ -1,4 +1,5 @@
-import startup_env_patch
+import pysqlite3
+sys.modules["sqlite3"] = pysqlite3
 import streamlit as st
 import warnings
 from datetime import datetime, timedelta
