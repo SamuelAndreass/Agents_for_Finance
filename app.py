@@ -158,6 +158,12 @@ def is_valid_macro_input(input_text):
     return is_valid_country(input_text) or is_valid_company(input_text)
 # ========== Agent Logic (merged from main.py) ==========
 def run_agent_by_intent(intent_data, crew: FinancialCrew, user_input: str):
+    if st.sidebar.checkbox("Show Debug Panel"):
+    st.sidebar.json({
+        "intent_output": intent_output,
+        "agent_configs_loaded": configs is not None,
+        "router_available": st.session_state.intent_router_agent is not None,
+    })
     entities = intent_data.get("entities", {})
     company_ticker = (
         entities.get("company_ticker")
@@ -338,12 +344,7 @@ with st.expander("ℹ️Disclaimerℹ️"):
         The analysis is not 100% correct, DYOR (Do your own research)
     ''')
     
-if st.sidebar.checkbox("Show Debug Panel"):
-    st.sidebar.json({
-        "intent_output": intent_output,
-        "agent_configs_loaded": configs is not None,
-        "router_available": st.session_state.intent_router_agent is not None,
-    })
+
 
 
 
