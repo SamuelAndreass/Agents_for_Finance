@@ -6,7 +6,7 @@ from tools.macroeconom_analysis import MacroeconomicTool
 import yaml
 
 class FinancialCrew:
-    def __init__(self):
+    def __init__(self, api_key: None):
         with open("config/agents.yaml") as f:
             self.agents_config = yaml.safe_load(f)
         with open("config/tasks.yaml") as f:
