@@ -53,13 +53,15 @@ if not st.session_state.authenticated:
         st.session_state.api_key = st.text_input("API Key", type="password")
         if st.button("Continue"):
             if st.session_state.api_key.startswith("sk-") and len(st.session_state.api_key) > 20:
-                st.session_state.authenticated = True
-                st.success("Your API Key is valid. Redirecting to main page...")
-                st.rerun()
+                if is_valid_openai_key(st.session_state.api_key):  # <- tambahkan pengecekan valid API
+                    st.session_state.authenticated = True
+                    st.success("Your API Key is valid. Redirecting to main page...")
+                    st.rerun()
+                else:
+                    st.error("The API key is not valid. Please check it again.")
             else:
-                st.error("Your API key is not valid. input OPEN API key with 'sk-'.")
+                st.error("Your API key format is invalid.")
 
-        st.stop()
 
 
 class GenericChatAgent:
