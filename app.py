@@ -116,9 +116,9 @@ if "main_conversational_agent" not in st.session_state:
     st.session_state.main_conversational_agent = initialize_agent("conversational_agent", configs, api_key)
 
 # Cache CrewAI object
-def get_crew():
-    return FinancialCrew()
-crew = get_crew()
+def get_crew(api_key):
+    return FinancialCrew(api_key=api_key)
+crew = get_crew(api_key)
 
 # ========== Check Ticker ==========
 def is_valid_ticker(company_ticker):
