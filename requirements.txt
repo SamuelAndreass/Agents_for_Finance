@@ -1,5 +1,6 @@
 streamlit
 python-dotenv
+pysqlite3-binary
 requests
 pyyaml
 pandas
