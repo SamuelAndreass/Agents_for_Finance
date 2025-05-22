@@ -336,14 +336,17 @@ with st.expander("ℹ️Disclaimerℹ️"):
                 
         ### ⚠️ DISCLAIMER ⚠️ :
         The analysis is not 100% correct, DYOR (Do your own research)
-        
     ''')
-
+    
 if st.sidebar.checkbox("Show Debug Panel"):
-    st.sidebar.subheader("Agent Configs")
-    st.sidebar.json(configs)
-    st.sidebar.subheader("API Key")
-    st.sidebar.write(api_key)
+    st.sidebar.json({
+        "intent_output": intent_output,
+        "agent_configs_loaded": configs is not None,
+        "router_available": st.session_state.intent_router_agent is not None,
+    })
+
+
+
 timeout_minutes = 30
 now = datetime.now()
 if now - st.session_state.last_interaction > timedelta(minutes=timeout_minutes):
