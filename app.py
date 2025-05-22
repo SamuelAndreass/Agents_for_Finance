@@ -34,8 +34,12 @@ def load_agent_configs(config_path="./config/agents.yaml"):
 
 def is_valid_openai_key(api_key: str) -> bool:
     try:
-        client = openai.OpenAI(api_key=api_key)
-        _ = client.models.list()
+        client = OpenAI(api_key=api_key)
+        _ = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": "ping"}],
+            max_tokens=1
+        )
         return True
     except Exception as e:
         print("[API KEY INVALID]", str(e))
