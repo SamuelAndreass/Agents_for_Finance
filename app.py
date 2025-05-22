@@ -158,12 +158,6 @@ def is_valid_macro_input(input_text):
     return is_valid_country(input_text) or is_valid_company(input_text)
 # ========== Agent Logic (merged from main.py) ==========
 def run_agent_by_intent(intent_data, crew: FinancialCrew, user_input: str):
-    if st.sidebar.checkbox("Show Debug Panel"):
-    st.sidebar.json({
-        "intent_output": intent_output,
-        "agent_configs_loaded": configs is not None,
-        "router_available": st.session_state.intent_router_agent is not None,
-    })
     entities = intent_data.get("entities", {})
     company_ticker = (
         entities.get("company_ticker")
@@ -265,8 +259,17 @@ def is_error_message(report):
 def handle_user_query(crew, prompt, chat_history):
     # Step 1: Detect intent
     intent_output = st.session_state.intent_router_agent.query(prompt)
-    print("=== INTENT DETECTED ===")
-    print(intent_output)
+    if st.sidebar.checkbox("Show Debug Panel", value=True):
+       st.sidebar.subheader("Debug Info")
+       st.sidebar.json({
+            "Prompt": prompt,
+            "Intent Output (raw)": intent_output,
+            "Agent Configs": st.session_state.agent_configs,
+            "Router Agent Exists": st.session_state.intent_router_agent is not None,
+            "API Key": st.session_state.api_key
+        })
+
+        
     try:
         intent_data = json.loads(intent_output)
         if "intent" not in intent_data or "entities" not in intent_data:
