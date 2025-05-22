@@ -21,11 +21,13 @@ st.set_page_config(page_title="Financial Chatbot", page_icon="💬", layout="wid
 warnings.filterwarnings("ignore")
 
 # ========== Helper Functions ==========
-
 def load_agent_configs(config_path="./config/agents.yaml"):
     try:
         with open(config_path, 'r') as f:
-            return yaml.safe_load(f)
+            data = yaml.safe_load(f)
+            if not data:
+                raise ValueError("YAML loaded but empty or invalid structure.")
+            return data
     except Exception as e:
         st.error(f"Error loading agent configs: {e}")
         return None
