@@ -1,6 +1,4 @@
-import sys
-import pysqlite3
-sys.modules["sqlite3"] = pysqlite3
+
 import os
 import streamlit as st
 import warnings
@@ -257,48 +255,89 @@ def is_error_message(report):
     ])
 
 def handle_user_query(crew, prompt, chat_history):
-    # Step 1: Detect intent
+    # Step 1: Detect intent(s)
     intent_output = st.session_state.intent_router_agent.query(prompt)
     print("=== INTENT DETECTED ===")
     print(intent_output)
+
     try:
         intent_data = json.loads(intent_output)
-        if "intent" not in intent_data or "entities" not in intent_data:
-            raise ValueError("Invalid format: Missing keys.")
+        intents_list = []
+        # Jika ada key "intents" berupa list (multi-intent)
+        if "intents" in intent_data and isinstance(intent_data["intents"], list):
+            intents_list = intent_data["intents"]
+        # Jika hanya satu intent saja
+        elif "intent" in intent_data:
+            intents_list = [intent_data]
+        else:
+            raise ValueError("Invalid format: Missing 'intent' or 'intents'.")
+
+        if not intents_list:
+            raise ValueError("No intents detected.")
+
     except Exception as e:
-         print("[Intent Parsing Error]", str(e))
-         return "Sorry, I couldn’t understand your request.", chat_history
-    # Step 2: Run agent based on intent
+        print("[Intent Parsing Error]", str(e))
+        return "Sorry, I couldn’t understand your request.", chat_history
+
     allowed_intents = ["fundamental_analysis", "technical_analysis", "macro_outlook"]
 
-    if intent_data["intent"] not in allowed_intents:
-        return "I'm currently focused on financial analysis such as fundamental, technical, or macroeconomic insights. Please ask something related to those topics.", chat_history
+    # Helper function untuk ekstrak string dari report (CrewOutput atau biasa)
+    def extract_report_text(report):
+        # Jika report adalah objek yang punya atribut content (CrewOutput dll)
+        if hasattr(report, "content"):
+            return report.content
+        # Bisa juga cek atribut text jika ada
+        elif hasattr(report, "text"):
+            return report.text
+        else:
+            # fallback ke str()
+            return str(report)
 
-    report = run_agent_by_intent(intent_data, crew, prompt)
-    str_report = str(report)
-    # Cek dulu apakah report adalah pesan error
-    if not report or is_error_message(report):
-    # Kalau error, langsung return tanpa proses summary
-        return report, chat_history
+    # Step 2: Run agent for each detected intent and collect responses
+    reports = []
+    for intent_entry in intents_list:
+        intent_name = intent_entry.get("intent", "").lower()
+        if intent_name not in allowed_intents:
+            print(f"[Skipping unsupported intent] {intent_name}")
+            continue
 
-    # Step 3: Summarize output jika bukan hasil dari main_conversational_agent
-    if intent_data.get("intent") != "conversation":
-        summary_prompt = f"""
-        Here is the result of the technical or fundamental analysis or macroeconomic analysis:
-        {str_report}
+        report = run_agent_by_intent(intent_entry, crew, prompt)
 
-        PUser request was: "{prompt}"
+        # Skip error messages
+        if report and not is_error_message(report):
+            report_text = extract_report_text(report)
+            reports.append(report_text)
+        else:
+            print(f"[Error or empty report] for intent {intent_name}: {report}")
 
-         Please summarize only the information relevant to the request. If the user mentioned specific elements like RSI or MACD, just highlight those points. If nothing specific is mentioned, provide a general and comprehensive summary.
-        """
+    if not reports:
+        # Jika tidak ada hasil valid
+        return (
+            "Hmm, I couldn't find any relevant information based on your input. "
+            "Could you please double-check the ticker or rephrase your question?"
+            , chat_history
+        )
 
-        summary = st.session_state.summarizer_agent.query(summary_prompt)
+    # Step 3: Gabungkan semua report jadi satu string
+    combined_report = "\n\n---\n\n".join(reports)
 
-        print(f"summary result {summary}")
-        return summary, chat_history + [{"role": "assistant", "content": summary}]
-    else:
-        # Kalau sudah langsung hasil dari conversational agent
-        return report, chat_history + [{"role": "assistant", "content": report}]
+    # Step 4: Gunakan summarizer agent untuk merangkum hasil gabungan
+    summary_prompt = f"""
+    Here are the combined results for your request:
+    {combined_report}
+
+    User request was: "{prompt}"
+
+    Please provide a concise summary highlighting key points from each analysis.
+    """
+
+    summary = st.session_state.summarizer_agent.query(summary_prompt)
+    print(f"summary result {summary}")
+
+    # Return summary dan update chat history
+    return summary, chat_history + [{"role": "assistant", "content": summary}]
+
+
 
 def clean_llm_markdown(text):
     # Remove excessive backslashes, e.g. \\n, \|, \t, etc
