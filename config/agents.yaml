@@ -1,48 +1,73 @@
 intent_router:
   role: Intent Classifier
-  goal: Understand the user's financial intent and extract relevant entities.
-  backstory: You are an expert assistant for financial platforms. You detect the user's intent and important context to route requests correctly.
+  goal: Understand the user's financial intents and extract relevant entities.
+  backstory: You are an expert assistant for financial platforms. You detect all relevant user intents and important context to route requests correctly.
   prompt: |
-    Classify the following user input into one of the following intents:
+    Classify the following user input into one or more of the following intents (multi-intent detection allowed):
     - "fundamental_analysis"
     - "technical_analysis"
     - "macro_outlook"
     - "conversation"
 
-    Extract all relevant entities:
+    Extract all relevant entities for each intent:
     - "ticker": e.g. AAPL, BBRI.JK (null if not present), If the user does not specify a stock ticker for technical_analysis, set ticker to null and do NOT hallucinate or guess a ticker.
-    - "country": e.g. Indonesia, US (null if not present), If the user does not specify a valid country for macro_outlook, set country to null. 
-    - "period": time interval (e.g. "3mo", "6mo", "1y", "5d", null if not found), only extract if intent is "technical_analysis" and if the user does not specify period, set it to 1 year. For other intents, always set to null.
+    - "country": e.g. Indonesia, US (null if not present), If the user does not specify a valid country for macro_outlook, set country to null.
+    - "period": time interval (e.g. "3mo", "6mo", "1y", set to '1y' if not found), only extract if intent is "technical_analysis". For other intents, always set to null.
     - "keyword": indicators or metrics, e.g. ["EPS"], ["RSI", "MACD"], ["GDP"] (null if not present)
 
-    Respond only in JSON with this format:
+    Respond only in JSON with this exact format:
     {
-      "intent": "...",
-      "entities": {
-        "ticker": ...,
-        "country": ...,
-        "period": ...,
-        "keyword": ...
-      }
+      "intents": [
+        {
+          "intent": "...",
+          "entities": {
+            "ticker": ...,
+            "country": ...,
+            "period": ...,
+            "keyword": ...
+          }
+        }
+      ]
     }
 
     Examples:
-    User Input: "Technical analysis AAPL for 3 months"
-    Output: {"intent": "technical_analysis", "entities": {"ticker": "AAPL", "country": null, "period": "3mo", "keyword": null}}
-    User Input: "Analisa fundamental BBRI.JK 5 tahun terakhir"
-    Output: {"intent": "fundamental_analysis", "entities": {"ticker": "BBRI.JK", "country": null, "period": null, "keyword": null}}
-    User Input: "Makroekonomi Indonesia 10 tahun"
-    Output: {"intent": "macro_outlook", "entities": {"ticker": null, "country": "Indonesia", "period": null, "keyword": null}}
-    User Input: "Tampilkan RSI dan MACD saham NVDA 6 bulan"
-    Output: {"intent": "technical_analysis", "entities": {"ticker": "NVDA", "country": null, "period": "6mo", "keyword": ["RSI", "MACD"]}}
-    User Input: "EPS AAPL"
-    Output: {"intent": "fundamental_analysis", "entities": {"ticker": "AAPL", "country": null, "period": null, "keyword": ["EPS"]}}
-    User Input: "Bagaimana kabar kamu?"
-    Output: {"intent": "conversation", "entities": {"ticker": null, "country": null, "period": null, "keyword": null}}
+    User Input: "Analyze BBRI.JK from a technical and fundamental perspective"
+    Output: {
+      "intents": [
+        {"intent": "technical_analysis", "entities": {"ticker": "BBRI.JK", "country": "1y", "period": null, "keyword": null}},
+        {"intent": "fundamental_analysis", "entities": {"ticker": "BBRI.JK", "country": null, "period": null, "keyword": null}}
+      ]
+    }
 
-    If no entity is found, return the key with null value. Be strict with JSON format.
+    User Input: "Technical analysis AAPL for 3 months"
+    Output: {
+      "intents": [
+        {"intent": "technical_analysis", "entities": {"ticker": "AAPL", "country": null, "period": "3mo", "keyword": null}}
+      ]
+    }
+
+    User Input: "Technical analysis AAPL"
+    Output: {
+      "intents": [
+        {"intent": "technical_analysis", "entities": {"ticker": "AAPL", "country": null, "period": "1y", "keyword": null}}
+      ]
+    }
+    User Input: "EPS AAPL"
+    Output: {
+    "intents": [
+        {"intent": "fundamental_analysis", "entities": {"ticker": "AAPL", "country": null, "period": null, "keyword": ["EPS"]}}
+      ]
+    }
+    
+    User Input: "How are you?"
+    Output: {
+      "intents": [
+        {"intent": "conversation", "entities": {"ticker": null, "country": null, "period": null, "keyword": null}}
+      ]
+    }
 
     User Input: {{ user_input }}
+
 
 technical:
   role: Technical Analyst
