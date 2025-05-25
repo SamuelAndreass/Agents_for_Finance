@@ -190,6 +190,8 @@ def run_agent_by_intent(intent_data, crew: FinancialCrew, user_input: str):
 
     elif intent == "technical_analysis":
         period = entities.get("period") or intent_data.get("period")   # backup, in case LLM outputs directly
+        if not period and intent == "technical_analysis":
+            period = "1y" 
         if not is_valid_ticker(company_ticker):
             return 'Ticker not found! please input the correct ticker name (Read Descalimer).'
         if not company_ticker:
