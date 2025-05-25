@@ -12,7 +12,7 @@ intent_router:
     Extract all relevant entities for each intent:
     - "ticker": e.g. AAPL, BBRI.JK (null if not present), If the user does not specify a stock ticker for technical_analysis, set ticker to null and do NOT hallucinate or guess a ticker.
     - "country": e.g. Indonesia, US (null if not present), If the user does not specify a valid country for macro_outlook, set country to null.
-    - "period": time interval (e.g. "3mo", "6mo", "1y", set to '1y' if not found), only extract if intent is "technical_analysis". For other intents, always set to null.
+    - "period": time interval (e.g. "3mo", "6mo", "1y", if not specified, set to null), only extract if intent is "technical_analysis". For other intents, always set to null.
     - "keyword": indicators or metrics, e.g. ["EPS"], ["RSI", "MACD"], ["GDP"] (null if not present)
 
     Respond only in JSON with this exact format:
