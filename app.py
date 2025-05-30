@@ -382,15 +382,6 @@ with st.expander("ℹ️Disclaimerℹ️"):
         
     ''')
 
-
-timeout_minutes = 30
-now = datetime.now()
-if now - st.session_state.last_interaction > timedelta(minutes=timeout_minutes):
-    st.session_state.messages = []
-    st.session_state.chat_history = []
-    st.warning("Session timed out. Chat cleared.")
-    st.session_state.last_interaction = now
-
 # Display chat history
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
