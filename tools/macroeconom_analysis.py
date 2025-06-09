@@ -7,9 +7,8 @@ from dotenv import load_dotenv
 from typing import Type
 load_dotenv()
 
-# ✅ Pydantic schema for tool input
 class MacroeconomicToolInput(BaseModel):
-    description: str  # Wajib field ini agar CrewAI tahu bahwa "input" harus string
+    description: str 
 
 class MacroeconomicTool(BaseTool):
     name: str = "MacroEconomicDataTool"
