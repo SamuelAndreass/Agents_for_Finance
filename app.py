@@ -46,7 +46,7 @@ if "authenticated" not in st.session_state:
 if "api_key" not in st.session_state:
     st.session_state.api_key = ""
 if not st.session_state.authenticated:    
-    st.title("💬 Financial Assistant")
+    st.title("💬 Stock Assistant AI Chatbot")
     st.warning("We don't save any of your API key. It is only saved in current session", icon="⚠️")
     if not st.session_state.authenticated:
         st.session_state.api_key = st.text_input("API Key", type="password")
@@ -348,10 +348,10 @@ def clean_llm_markdown(text):
     return text.replace("\\n", "\n").replace("\\|", "|").replace("\\\\", "\\")
 
 # ========== Chat UI ==========
-st.title("💬 Financial Assistant")
+st.title("💬 Stock Assistant AI Chatbot")
 with st.expander("ℹ️Disclaimerℹ️"):
     st.markdown('''
-        This chatbot is your **AI-powered Financial Assistant**.  
+        This chatbot is your **AI-powered Market Stock AI Assistant**.  
         It can help you with a variety of financial insights and tasks.:
 
         ### 🧠 Supported Capabilities:
