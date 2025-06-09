@@ -10,64 +10,56 @@ intent_router:
     - "conversation"
 
     Extract all relevant entities for each intent:
-    - "ticker": e.g. AAPL, BBRI.JK (null if not present), If the user does not specify a stock ticker for technical_analysis, set ticker to null and do NOT hallucinate or guess a ticker.
-    - "country": e.g. Indonesia, US (null if not present), If the user does not specify a valid country for macro_outlook, set country to null.
-    - "period": time interval (e.g. "3mo", "6mo", "1y", if not specified, set to null), only extract if intent is "technical_analysis". For other intents, always set to null.
-    - "keyword": indicators or metrics, e.g. ["EPS"], ["RSI", "MACD"], ["GDP"] (null if not present)
+    - "ticker": e.g. AAPL, BBRI.JK (null if not present)
+    - "country": e.g. Indonesia, US (null if not present)
+    - "period": time interval (e.g. "3mo", "6mo", "1y") — only if intent is "technical_analysis"
+    - "start_date": start time (ISO format preferred, e.g. "2025-01-01") — only if intent is "technical_analysis"
+    - "end_date": end time (ISO format preferred, e.g. "2025-06-30") — only if intent is "technical_analysis"
+    - "keyword": indicators or metrics, e.g. ["EPS"], ["RSI", "MACD"], ["GDP"]
 
     Respond only in JSON with this exact format:
     {
       "intents": [
-        {
-          "intent": "...",
-          "entities": {
-            "ticker": ...,
-            "country": ...,
-            "period": ...,
-            "keyword": ...
-          }
-        }
+        {"intent": "...", "entities": {"ticker": ..., "country": ..., "period": ..., "start_date": ..., "end_date": ..., "keyword": ...}},
+        ...
       ]
     }
 
     Examples:
+    User Input: "Compare AAPL and NVDA based on fundamental analysis"
+    Output:
+    {
+      "intents": [
+        {"intent": "fundamental_analysis", "entities": {"ticker": "AAPL", "country": null, "period": null, "start_date": null, "end_date": null, "keyword": null}},
+        {"intent": "fundamental_analysis", "entities": {"ticker": "NVDA", "country": null, "period": null, "start_date": null, "end_date": null, "keyword": null}}
+      ]
+    }
+
     User Input: "Analyze BBRI.JK from a technical and fundamental perspective"
-    Output: {
+    Output:
+    {
       "intents": [
-        {"intent": "technical_analysis", "entities": {"ticker": "BBRI.JK", "country": "1y", "period": null, "keyword": null}},
-        {"intent": "fundamental_analysis", "entities": {"ticker": "BBRI.JK", "country": null, "period": null, "keyword": null}}
+        {"intent": "technical_analysis", "entities": {"ticker": "BBRI.JK", "country": null, "period": "null", "start_date": null, "end_date": null, "keyword": null}},
+        {"intent": "fundamental_analysis", "entities": {"ticker": "BBRI.JK", "country": null, "period": null, "start_date": null, "end_date": null, "keyword": null}}
       ]
     }
 
-    User Input: "Technical analysis AAPL for 3 months"
-    Output: {
+    User Input: "What's the macro outlook for Indonesia?"
+    Output:
+    {
       "intents": [
-        {"intent": "technical_analysis", "entities": {"ticker": "AAPL", "country": null, "period": "3mo", "keyword": null}}
+        {"intent": "macro_outlook", "entities": {"ticker": null, "country": "Indonesia", "period": null, "start_date": null, "end_date": null, "keyword": null}}
       ]
     }
 
-    User Input: "Technical analysis AAPL"
-    Output: {
-      "intents": [
-        {"intent": "technical_analysis", "entities": {"ticker": "AAPL", "country": null, "period": "1y", "keyword": null}}
-      ]
-    }
-    User Input: "EPS AAPL"
-    Output: {
-    "intents": [
-        {"intent": "fundamental_analysis", "entities": {"ticker": "AAPL", "country": null, "period": null, "keyword": ["EPS"]}}
-      ]
-    }
-    
-    User Input: "How are you?"
-    Output: {
-      "intents": [
-        {"intent": "conversation", "entities": {"ticker": null, "country": null, "period": null, "keyword": null}}
-      ]
-    }
-
+    User Input: "Give me technical analysis for NVDA from January to June 2025 using RSI and MACD"
+    Output:
+        {
+          "intents": [
+            {"intent": "technical_analysis", "entities": {"ticker": "NVDA", "country": "null", "period": null, "start_date": "2025-01-01", "end_date": "2025-06-30", "keyword": ["RSI", "MACD"]}}
+          ]
+        }
     User Input: {{ user_input }}
-
 
 technical:
   role: Technical Analyst
@@ -76,6 +68,9 @@ technical:
   prompt: |
     Analyze the stock using the provided ticker symbol and generate a technical report.
     Include indicators like MACD, RSI, Moving Averages, Bollinger Bands, Volume Trends, and provide a concise interpretation.
+    
+    Additionally, specify the **exact date range** used in the analysis (start and end dates based on the data retrieved).
+    Format dates clearly, for example: "Data range analyzed: January 21, 2025 – May 21, 2025"
 
 fundamental:
   role: Fundamental Analyst
