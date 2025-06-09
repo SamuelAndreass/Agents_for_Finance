@@ -3,14 +3,23 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from crewai.tools import BaseTool
+from pydantic import BaseModel
+from typing import Optional, ClassVar
+
 
 class TechnicalAnalysisTool(BaseTool):
     name: str = "TechnicalAnalysisTool"
     description: str = "Performs technical analysis for a given stock."  
-    def _run(self, stock_symbol: str, period: str = "1y") -> dict:
+    def _run(self, stock_symbol: str, period: str = None, start_date:str=None, end_date:str=None, progress=False) -> dict:
         try:
-            print(f"Downloading data for {stock_symbol} with period '{period}'...")
-            data = yf.download(stock_symbol, period=period, progress=False)
+            print(f"[Technical Tool] Requesting data for {stock_symbol}...")
+            if start_date and end_date:
+                print(f"Using date range: {start_date} to {end_date}")
+                data = yf.download(stock_symbol, start=start_date, end=end_date, progress=False)
+            else:
+                print(f"Using period: {period}")
+                data = yf.download(stock_symbol, period=period, progress=False)
+
             print(f"Raw data shape: {data.shape}, Columns: {data.columns}")
 
             # Handle MultiIndex if present
