@@ -1,15 +1,75 @@
 fundamental_task:
-  description: Conduct a fundamental financial analysis of the company identified by the ticker "{company_ticker}". Focus on profitability, financial ratios, and growth.
-  expected_output: A structured report on financial ratios, income statements, balance sheets, growth trends, and valuation.
+  description: |
+    You are a seasoned fundamental financial analyst.
+
+    Conduct a detailed fundamental analysis of the company identified by the ticker "{company_ticker}".
+
+    Your analysis should cover:
+    - Profitability metrics and key financial ratios (e.g., P/E, ROE, Debt-to-Equity).
+    - Income statement and balance sheet highlights.
+    - Historical and recent growth trends.
+    - Valuation analysis including DCF or comparable metrics if available.
+    - Any notable risks or strengths observed from the financial data.
+    - Provide a clear buy/hold/sell recommendation supported by your analysis.
+
+  expected_output: |
+    Provide a structured and comprehensive report including:
+    - Summary of financial ratios with explanations.
+    - Overview of income statement and balance sheet.
+    - Growth trends interpretation.
+    - Valuation insights.
+    - Investment recommendation with justification.
 
 technical_task:
-  description: Conduct a technical analysis for the stock identified by the ticker "{stock_symbol}" over the period "{period}".
-  expected_output: A report of technical indicators including trend, momentum, volume behavior, and trading signals for the stock.
+  description: |
+    You are an expert technical analyst.
+
+    Conduct an in-depth technical analysis for the stock {stock_symbol}.
+
+    If both {start_date} and {end_date} are provided and not empty, use the date range from {start_date} to {end_date} for your analysis.
+
+    Otherwise, use the period {period} as the timeframe.
+
+    Your analysis should include:
+    - Trend identification and key momentum indicators (e.g., RSI, MACD).
+    - Volume behavior and its implications.
+    - Trading signals and chart patterns.
+    - Support and resistance levels.
+    - Provide a clear buy/hold/sell recommendation based on technical evidence.
+
+  expected_output: |
+    Generate a detailed report that covers:
+    - Summary of trend and momentum indicators.
+    - Volume analysis.
+    - Identified trading signals and patterns.
+    - Support/resistance levels.
+    - Final investment recommendation with reasons.
+
+  inputs:
+    - stock_symbol
+    - period
+    - start_date
+    - end_date
 
 
 macro_task:
-  description: Perform a macroeconomic analysis using the input "{input}". This input may be a country name or a company ticker which will be resolved to a country.
-  expected_output: Summary of GDP, inflation, and unemployment data for {input}, including historical trends and economic interpretation.
+  description: |
+    You are an expert macroeconomic analyst. Perform a comprehensive macroeconomic analysis using the input "{input}", which can be a country name or a company ticker (resolved to a country).
+
+    Your analysis should include:
+    - Historical and recent trends of key indicators such as GDP growth, inflation rate, and unemployment rate.
+    - Explanation of how these macroeconomic factors impact the country's economic health and financial markets.
+    - Highlight any significant recent events or policy changes affecting the economy.
+    - Provide a clear and concise buy/hold/sell recommendation for investments related to this country, supported by your macroeconomic insights.
+    - Use reliable data ranges where possible, and mention the time periods analyzed.
+
+  expected_output: |
+    Provide a well-structured summary including:
+    - Overview of GDP, inflation, and unemployment trends with relevant numbers and percentage changes.
+    - Interpretation of these trends in layman terms.
+    - Notable economic developments or risks.
+    - Clear investment recommendation (buy, hold, or sell) with justification based on your analysis.
+
 
 conversation_task:
   description: Respond to general financial questions or casual inquiries that don’t match a specific analytical task.
