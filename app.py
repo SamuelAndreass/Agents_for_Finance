@@ -15,13 +15,10 @@ from crewai import Crew, Process
 import re
 import yfinance as yf
 from tools.macroeconom_analysis import MacroeconomicTool
-# Load environment variables
 
-# ========== Streamlit Config ==========
+
 st.set_page_config(page_title="Financial Chatbot", page_icon="💬", layout="wide")
 warnings.filterwarnings("ignore")
-
-# ========== Helper Functions ==========
 
 def load_agent_configs(config_path="./config/agents.yaml"):
     try:
@@ -40,13 +37,12 @@ def is_valid_openai_key(api_key: str) -> bool:
         print("[API KEY INVALID]", str(e))
         return False
 
-# ========== API Key Setup Page ==========
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 if "api_key" not in st.session_state:
     st.session_state.api_key = ""
 if not st.session_state.authenticated:    
-    st.title("💬 Stock Assistant AI Chatbot")
+    st.title("💬 Financial Assistant")
     st.warning("We don't save any of your API key. It is only saved in current session", icon="⚠️")
     if not st.session_state.authenticated:
         st.session_state.api_key = st.text_input("API Key", type="password")
@@ -60,7 +56,6 @@ if not st.session_state.authenticated:
                 st.error("Your API key is not valid. input OPEN API key with 'sk-'.")
 
         st.stop()
-
 
 class GenericChatAgent:
     def __init__(self, agent_config, api_key=None):
@@ -92,7 +87,6 @@ def initialize_agent(agent_name, agent_configs, api_key):
         return GenericChatAgent(agent_config, api_key)
     return None
 
-# ========== Session State Initialization ==========
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "chat_history" not in st.session_state:
@@ -105,7 +99,6 @@ if "agent_configs" not in st.session_state:
 api_key = api_key = st.session_state.api_key
 configs = st.session_state.agent_configs
 
-# Inisialisasi Agents
 if "intent_router_agent" not in st.session_state:
     st.session_state.intent_router_agent = initialize_agent("intent_router", configs, api_key)
 if "fundamental_agent" not in st.session_state:
@@ -117,17 +110,14 @@ if "summarizer_agent" not in st.session_state:
 if "main_conversational_agent" not in st.session_state:
     st.session_state.main_conversational_agent = initialize_agent("conversational_agent", configs, api_key)
 
-# Cache CrewAI object
 def get_crew():
     return FinancialCrew(api_key=api_key)
 crew = get_crew()
 
-# ========== Check Ticker ==========
 def is_valid_ticker(company_ticker):
     try:
         ticker = yf.Ticker(company_ticker)
         inf = ticker.info
-        # Bisa juga cek data harga
         price_data = ticker.history(period="1d")
         if (
             inf is None
@@ -141,8 +131,7 @@ def is_valid_ticker(company_ticker):
     except Exception as e:
         print(f"[Ticker Validation Exception] {e}")
         return False
-    
-# ========== is valid ticker or country ==========
+
 def is_valid_company(input_text):
     try:
         info = yf.Ticker(input_text).info
@@ -156,7 +145,40 @@ def is_valid_country(country_input):
 
 def is_valid_macro_input(input_text):
     return is_valid_country(input_text) or is_valid_company(input_text)
-# ========== Agent Logic (merged from main.py) ==========
+
+def plot_price_chart(ticker: str, period: str = None, start_date: str = None, end_date: str = None):
+    st.write(f"Plotting price chart for {ticker}")
+
+    ticker_obj = yf.Ticker(ticker)
+    if start_date and end_date:
+        df = ticker_obj.history(start=start_date, end=end_date)
+    else:
+        df = ticker_obj.history(period=period or "1y")
+
+    if df.empty:
+        st.warning("History data empty, fallback to yf.download")
+        if start_date and end_date:
+            df = yf.download(ticker, start=start_date, end=end_date)
+        else:
+            df = yf.download(ticker, period=period or "1y")
+
+    if df.empty:
+        st.warning("No data to plot.")
+        return
+
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = [' '.join(col).strip() for col in df.columns.values]
+
+    close_cols = [col for col in df.columns if 'Close' in col]
+    if not close_cols:
+        st.warning("No Close price data to plot.")
+        return
+
+    close_col = close_cols[0]
+
+    st.subheader(f"📈 {ticker} Price Chart")
+    st.line_chart(df[close_col])
+    
 def run_agent_by_intent(intent_data, crew: FinancialCrew, user_input: str):
     entities = intent_data.get("entities", {})
     company_ticker = (
@@ -189,23 +211,43 @@ def run_agent_by_intent(intent_data, crew: FinancialCrew, user_input: str):
         return result
 
     elif intent == "technical_analysis":
-        period = entities.get("period") or intent_data.get("period")   # backup, in case LLM outputs directly
-        if not period and intent == "technical_analysis":
-            period = "1y" 
+        start_date = entities.get("start_date")
+        end_date = entities.get("end_date")
+        period = entities.get("period") or intent_data.get("period")
+
         if not is_valid_ticker(company_ticker):
-            return 'Ticker not found! please input the correct ticker name (Read Descalimer).'
+            return 'Ticker not found! please input the correct ticker name (Read Disclaimer).'
         if not company_ticker:
             return "Please specify the stock ticker you want technical analysis for. Example: 'Technical analysis AAPL for 3 months.'"
-        
-        print(f"[Dispatcher] Running technical analysis for {company_ticker} ({period})")
+
+        if not (start_date and end_date):
+            start_date = None
+            end_date = None
+
         technical_crew = Crew(
             agents=[crew.technical_agent()],
             tasks=[crew.technical_task()],
             process=Process.sequential,
             verbose=True,
         )
-        result = technical_crew.kickoff(inputs={"stock_symbol": company_ticker, "period": period})
+
+        inputs = {"stock_symbol": company_ticker}
+
+        if start_date and end_date:
+            inputs["start_date"] = start_date
+            inputs["end_date"] = end_date
+            inputs["period"] = ""
+        else:
+            inputs["period"] = period or "1y"
+            inputs["start_date"] = ""
+            inputs["end_date"] = ""
+
+        print(f"[Dispatcher] Running technical analysis for {company_ticker} with inputs: {inputs}")
+
+        result = technical_crew.kickoff(inputs=inputs)
+
         return result
+
 
     elif intent == "macro_outlook":
         macro_input = entities.get("country") or company_ticker or user_input
@@ -259,7 +301,6 @@ def is_error_message(report):
     ])
 
 def handle_user_query(crew, prompt, chat_history):
-    # Step 1: Detect intent(s)
     intent_output = st.session_state.intent_router_agent.query(prompt)
     print("=== INTENT DETECTED ===")
     print(intent_output)
@@ -267,10 +308,8 @@ def handle_user_query(crew, prompt, chat_history):
     try:
         intent_data = json.loads(intent_output)
         intents_list = []
-        # Jika ada key "intents" berupa list (multi-intent)
         if "intents" in intent_data and isinstance(intent_data["intents"], list):
             intents_list = intent_data["intents"]
-        # Jika hanya satu intent saja
         elif "intent" in intent_data:
             intents_list = [intent_data]
         else:
@@ -283,21 +322,10 @@ def handle_user_query(crew, prompt, chat_history):
         print("[Intent Parsing Error]", str(e))
         return "Sorry, I couldn’t understand your request.", chat_history
 
+    st.session_state.last_intent_data = intents_list[-1] 
+
     allowed_intents = ["fundamental_analysis", "technical_analysis", "macro_outlook"]
 
-    # Helper function untuk ekstrak string dari report (CrewOutput atau biasa)
-    def extract_report_text(report):
-        # Jika report adalah objek yang punya atribut content (CrewOutput dll)
-        if hasattr(report, "content"):
-            return report.content
-        # Bisa juga cek atribut text jika ada
-        elif hasattr(report, "text"):
-            return report.text
-        else:
-            # fallback ke str()
-            return str(report)
-
-    # Step 2: Run agent for each detected intent and collect responses
     reports = []
     for intent_entry in intents_list:
         intent_name = intent_entry.get("intent", "").lower()
@@ -307,25 +335,26 @@ def handle_user_query(crew, prompt, chat_history):
 
         report = run_agent_by_intent(intent_entry, crew, prompt)
 
-        # Skip error messages
         if report and not is_error_message(report):
-            report_text = extract_report_text(report)
+            if hasattr(report, "content"):
+                report_text = report.content
+            elif hasattr(report, "text"):
+                report_text = report.text
+            else:
+                report_text = str(report)
             reports.append(report_text)
         else:
             print(f"[Error or empty report] for intent {intent_name}: {report}")
 
     if not reports:
-        # Jika tidak ada hasil valid
         return (
             "Hmm, I couldn't find any relevant information based on your input. "
             "Could you please double-check the ticker or rephrase your question?"
             , chat_history
         )
 
-    # Step 3: Gabungkan semua report jadi satu string
     combined_report = "\n\n---\n\n".join(reports)
 
-    # Step 4: Gunakan summarizer agent untuk merangkum hasil gabungan
     summary_prompt = f"""
     Here are the combined results for your request:
     {combined_report}
@@ -338,20 +367,15 @@ def handle_user_query(crew, prompt, chat_history):
     summary = st.session_state.summarizer_agent.query(summary_prompt)
     print(f"summary result {summary}")
 
-    # Return summary dan update chat history
     return summary, chat_history + [{"role": "assistant", "content": summary}]
 
-
-
 def clean_llm_markdown(text):
-    # Remove excessive backslashes, e.g. \\n, \|, \t, etc
     return text.replace("\\n", "\n").replace("\\|", "|").replace("\\\\", "\\")
 
-# ========== Chat UI ==========
-st.title("💬 Stock Assistant AI Chatbot")
+st.title("💬 Financial Assistant")
 with st.expander("ℹ️Disclaimerℹ️"):
     st.markdown('''
-        This chatbot is your **AI-powered Market Stock AI Assistant**.  
+        This chatbot is your **AI-powered Financial Assistant**.  
         It can help you with a variety of financial insights and tasks.:
 
         ### 🧠 Supported Capabilities:
@@ -382,12 +406,10 @@ with st.expander("ℹ️Disclaimerℹ️"):
         
     ''')
 
-# Display chat history
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# Input field
 prompt = st.chat_input("Ask me anything...")
 
 if prompt:
@@ -403,5 +425,18 @@ if prompt:
             st.session_state.chat_history = updated_history
             st.session_state.messages.append({"role": "assistant", "content": response})
             st.markdown(clean_llm_markdown(response))
-    st.session_state.last_interaction = datetime.now()
 
+            if hasattr(st.session_state, "last_intent_data"):
+                intent = st.session_state.last_intent_data.get("intent")
+                entities = st.session_state.last_intent_data.get("entities", {})
+                if intent == "technical_analysis":
+                    ticker = entities.get("ticker")
+                    start_date = entities.get("start_date")
+                    end_date = entities.get("end_date")
+                    period = entities.get("period") or "1y"
+
+                    if ticker:
+                        if start_date and end_date:
+                            plot_price_chart(ticker, start_date=start_date, end_date=end_date)
+                        else:
+                            plot_price_chart(ticker, period=period)
