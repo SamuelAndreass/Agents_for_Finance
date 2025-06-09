@@ -17,7 +17,7 @@ import yfinance as yf
 from tools.macroeconom_analysis import MacroeconomicTool
 
 
-st.set_page_config(page_title="Financial Chatbot", page_icon="💬", layout="wide")
+st.set_page_config(page_title="Stock Assistant Chatbot", page_icon="💬", layout="wide")
 warnings.filterwarnings("ignore")
 
 def load_agent_configs(config_path="./config/agents.yaml"):
@@ -42,7 +42,7 @@ if "authenticated" not in st.session_state:
 if "api_key" not in st.session_state:
     st.session_state.api_key = ""
 if not st.session_state.authenticated:    
-    st.title("💬 Financial Assistant")
+    st.title("💬 Stock Assistant Chatbot")
     st.warning("We don't save any of your API key. It is only saved in current session", icon="⚠️")
     if not st.session_state.authenticated:
         st.session_state.api_key = st.text_input("API Key", type="password")
@@ -372,7 +372,7 @@ def handle_user_query(crew, prompt, chat_history):
 def clean_llm_markdown(text):
     return text.replace("\\n", "\n").replace("\\|", "|").replace("\\\\", "\\")
 
-st.title("💬 Financial Assistant")
+st.title("💬 Stock Assistant Chatbot")
 with st.expander("ℹ️Disclaimerℹ️"):
     st.markdown('''
         This chatbot is your **AI-powered Financial Assistant**.  
