@@ -4,7 +4,7 @@ sys.modules["sqlite3"] = pysqlite3
 import os
 import streamlit as st
 import warnings
-from datetime import datetime, timedelta
+from datetime import datetime
 from dotenv import load_dotenv
 import yaml
 import json
@@ -15,9 +15,9 @@ from crewai import Crew, Process
 import re
 import yfinance as yf
 from tools.macroeconom_analysis import MacroeconomicTool
+import pydantic as pd
 
-
-st.set_page_config(page_title="Stock Assistant Chatbot", page_icon="💬", layout="wide")
+st.set_page_config(page_title="Financial Chatbot", page_icon="💬", layout="wide")
 warnings.filterwarnings("ignore")
 
 def load_agent_configs(config_path="./config/agents.yaml"):
@@ -41,50 +41,48 @@ if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 if "api_key" not in st.session_state:
     st.session_state.api_key = ""
-if not st.session_state.authenticated:    
-    st.title("💬 Stock Assistant Chatbot")
+if not st.session_state.authenticated:
+    st.title("💬 Financial Assistant")
     st.warning("We don't save any of your API key. It is only saved in current session", icon="⚠️")
-    if not st.session_state.authenticated:
-        st.session_state.api_key = st.text_input("API Key", type="password")
-        if st.button("Continue"):
-            if st.session_state.api_key.startswith("sk-") and len(st.session_state.api_key) > 20 and is_valid_openai_key(st.session_state.api_key):
-                st.session_state.authenticated = True
-                os.environ["OPENAI_API_KEY"] = st.session_state.api_key
-                st.success("Your API Key is valid. Redirecting to main page...")
-                st.rerun()
-            else:
-                st.error("Your API key is not valid. input OPEN API key with 'sk-'.")
-
-        st.stop()
+    st.session_state.api_key = st.text_input("API Key", type="password")
+    if st.button("Continue"):
+        if st.session_state.api_key.startswith("sk-") and len(st.session_state.api_key) > 20 and is_valid_openai_key(st.session_state.api_key):
+            st.session_state.authenticated = True
+            os.environ["OPENAI_API_KEY"] = st.session_state.api_key
+            st.success("Your API Key is valid. Redirecting to main page...")
+            st.rerun()
+        else:
+            st.error("Your API key is not valid. input OPEN API key with 'sk-'.")
+    st.stop()
 
 class GenericChatAgent:
-    def __init__(self, agent_config, api_key=None):
+    def __init__(self, agent_config, api_key=None, model="gpt-3.5-turbo"):
         self.agent_config = agent_config
         self.api_key = api_key
-        self.system_prompt = f"Role: {agent_config.get('role', '')}\\nGoal: {agent_config.get('goal', '')}\\nBackstory: {agent_config.get('backstory', '')}\\nInstructions: {agent_config.get('prompt', '')}"
+        self.model = model
+        self.system_prompt = f"Role: {agent_config.get('role', '')}\nGoal: {agent_config.get('goal', '')}\nBackstory: {agent_config.get('backstory', '')}\nInstructions: {agent_config.get('prompt', '')}"
         self.history = [{"role": "system", "content": self.system_prompt}]
 
     def query(self, user_prompt):
         if not user_prompt:
-            return "Ask someting..."
+            return "Ask something..."
         client = OpenAI(api_key=self.api_key)
         self.history.append({"role": "user", "content": user_prompt})
         try:
             response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model=self.model,
                 messages=self.history,
             )
             reply = response.choices[0].message.content
         except Exception as e:
             reply = f"Error: {str(e)}"
-
         self.history.append({"role": "assistant", "content": reply})
         return reply
 
-def initialize_agent(agent_name, agent_configs, api_key):
+def initialize_agent(agent_name, agent_configs, api_key, model):
     if agent_configs and agent_name in agent_configs:
         agent_config = agent_configs[agent_name]
-        return GenericChatAgent(agent_config, api_key)
+        return GenericChatAgent(agent_config, api_key, model=model)
     return None
 
 if "messages" not in st.session_state:
@@ -96,19 +94,22 @@ if "last_interaction" not in st.session_state:
 if "agent_configs" not in st.session_state:
     st.session_state.agent_configs = load_agent_configs()
 
-api_key = api_key = st.session_state.api_key
+api_key = st.session_state.api_key
 configs = st.session_state.agent_configs
 
+if "llm_model" not in st.session_state:
+    st.session_state.llm_model = "gpt-3.5-turbo"   # atau model lain, misal "gpt-4", "gpt-3.5-turbo", dst
 if "intent_router_agent" not in st.session_state:
-    st.session_state.intent_router_agent = initialize_agent("intent_router", configs, api_key)
+    st.session_state.intent_router_agent = initialize_agent("intent_router", configs, api_key, model=st.session_state.llm_model)
 if "fundamental_agent" not in st.session_state:
-    st.session_state.fundamental_agent = initialize_agent("fundamental", configs, api_key)
+    st.session_state.fundamental_agent = initialize_agent("fundamental", configs, api_key,  model=st.session_state.llm_model)
 if "macro_agent" not in st.session_state:
-    st.session_state.macro_agent = initialize_agent("macro", configs, api_key)
+    st.session_state.macro_agent = initialize_agent("macro", configs, api_key,  model=st.session_state.llm_model)
 if "summarizer_agent" not in st.session_state:
-    st.session_state.summarizer_agent = initialize_agent("summarizer", configs, api_key)
+    st.session_state.summarizer_agent = initialize_agent("summarizer", configs, api_key, model=st.session_state.llm_model)
 if "main_conversational_agent" not in st.session_state:
-    st.session_state.main_conversational_agent = initialize_agent("conversational_agent", configs, api_key)
+    st.session_state.main_conversational_agent = initialize_agent("conversational_agent", configs, api_key,  model=st.session_state.llm_model)
+
 
 def get_crew():
     return FinancialCrew(api_key=api_key)
@@ -145,6 +146,26 @@ def is_valid_country(country_input):
 
 def is_valid_macro_input(input_text):
     return is_valid_country(input_text) or is_valid_company(input_text)
+
+def find_latest_quarter(ticker):
+    stock = yf.Ticker(ticker)
+    qfin = stock.quarterly_financials
+    if qfin.empty:
+        return None, None
+    latest = max(qfin.columns)
+    year = latest.year
+    quarter = (latest.month - 1) // 3 + 1
+    return year, quarter
+
+def quarter_exists(ticker, year, quarter):
+    stock = yf.Ticker(ticker)
+    qfin = stock.quarterly_financials
+    if qfin.empty:
+        return False
+    for col in qfin.columns:
+        if col.year == int(year) and ((col.month - 1) // 3 + 1) == int(quarter):
+            return True
+    return False
 
 def plot_price_chart(ticker: str, period: str = None, start_date: str = None, end_date: str = None):
     st.write(f"Plotting price chart for {ticker}")
@@ -194,11 +215,22 @@ def run_agent_by_intent(intent_data, crew: FinancialCrew, user_input: str):
     print("[entities]", entities)
     print("[Ticker]", company_ticker)
     print("[Country]", entities.get("country"))
-
+    year    = intent_data.get("entities", {}).get("year")
+    quarter = intent_data.get("entities", {}).get("quarter")
+    
     if intent == "fundamental_analysis" and company_ticker:
+        print(f'[Year and Quarter] {year} and {quarter}')
         if not is_valid_ticker(company_ticker):
-            return 'Ticker not found! please input the correct ticker name (Read Descalimer).'
+            return 'Ticker not found! please input the correct ticker name (Read Disclaimer).'
         print(f"[Dispatcher] Running fundamental analysis for {company_ticker}")
+
+        # --- Tambahan fungsi validasi quarter dan year ---
+        if year is None or quarter is None or not quarter_exists(company_ticker, year, quarter):
+            print("[INFO] Using latest available quarter for analysis")
+            year, quarter = find_latest_quarter(company_ticker)
+            if year is None or quarter is None:
+                return 'No quarterly data available for this ticker.'
+
         fundamental_crew = Crew(
             agents=[crew.fundamental()],
             tasks=[crew.fundamental_task()],
@@ -207,7 +239,13 @@ def run_agent_by_intent(intent_data, crew: FinancialCrew, user_input: str):
         )
         print("[Fundamental Input Given]", company_ticker)
         print("[TASK DESCRIPTION]", crew.fundamental_task().description)
-        result = fundamental_crew.kickoff(inputs={"company_ticker": company_ticker})
+
+        kickoff_inputs = {
+            "company_ticker": company_ticker,
+            "year": int(year),
+            "quarter": int(quarter)
+        }
+        result = fundamental_crew.kickoff(inputs=kickoff_inputs)
         return result
 
     elif intent == "technical_analysis":
