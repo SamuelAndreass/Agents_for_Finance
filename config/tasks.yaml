@@ -1,76 +1,72 @@
 fundamental_task:
   description: |
     You are a seasoned fundamental financial analyst.
-
-    Conduct a detailed fundamental analysis of the company identified by the ticker "{company_ticker}".
-
-    Your analysis should cover:
-    - Profitability metrics and key financial ratios (e.g., P/E, ROE, Debt-to-Equity).
-    - Income statement and balance sheet highlights.
-    - Historical and recent growth trends.
-    - Valuation analysis including DCF or comparable metrics if available.
-    - Any notable risks or strengths observed from the financial data.
-    - Provide a clear buy/hold/sell recommendation supported by your analysis.
+    Conduct a detailed, data-driven fundamental analysis of the company identified by the ticker "{company_ticker}".
+    Focus the analysis on the financial data for quarter {quarter} of year {year}, if available.
+    Your analysis must cover:
+    - Key profitability metrics and financial ratios (e.g., P/E, ROE, Debt-to-Equity) with brief explanations.
+    - Highlights from the income statement and balance sheet for the given quarter.
+    - Interpretation of historical and recent growth trends, including YoY and multi-year performance.
+    - Valuation insights using DCF or other comparable models if data allows.
+    - Any notable risks, anomalies, or operational strengths observed.
+    - **End your analysis with a clear, actionable investment recommendation (BUY, HOLD, or SELL) for the stock, based on the evidence and reasoning from your analysis. Justify your recommendation using the most relevant financial findings.**
 
   expected_output: |
-    Provide a structured and comprehensive report including:
-    - Summary of financial ratios with explanations.
-    - Overview of income statement and balance sheet.
-    - Growth trends interpretation.
-    - Valuation insights.
-    - Investment recommendation with justification.
+    Provide a structured, professional report including:
+    - Quarter and year used for analysis.
+    - Summary table of key financial ratios with interpretation.
+    - Snapshot of income statement and balance sheet data for the selected period.
+    - Narrative on growth performance and patterns.
+    - Discussion of valuation (with assumptions if using DCF).
+    - **A conclusive investment recommendation (BUY, HOLD, or SELL), with a concise rationale referencing the main findings.**
 
 technical_task:
   description: |
-    You are an expert technical analyst.
+    Your primary goal is to provide a decisive and actionable trading recommendation (BUY or SELL) for {stock_symbol} based on the latest technical evidence. Only recommend HOLD if the signals are truly mixed or unclear.
 
-    Conduct an in-depth technical analysis for the stock {stock_symbol}.
+    Analyze the stock over the specified period ({start_date} to {end_date}, or {period} if not provided). Your analysis must include:
+    - Trend direction and momentum indicators (e.g., RSI, MACD).
+    - Volume patterns and their implications.
+    - Key support and resistance levels.
+    - Fibonacci retracement levels if a major move is detected.
+    - Immediate risk factors (e.g., proximity to support/resistance, false breakouts).
 
-    If both {start_date} and {end_date} are provided and not empty, use the date range from {start_date} to {end_date} for your analysis.
-
-    Otherwise, use the period {period} as the timeframe.
-
-    Your analysis should include:
-    - Trend identification and key momentum indicators (e.g., RSI, MACD).
-    - Volume behavior and its implications.
-    - Trading signals and chart patterns.
-    - Support and resistance levels.
-    - Provide a clear buy/hold/sell recommendation based on technical evidence.
+    **Recommendation policy:**
+    - If you observe RSI rising from below 30 to above 50 and MACD crossing from negative to positive, consider a possible "double bottom" or trend reversal.
+    - If the price closes above recent resistance with strong volume, signal a breakout.
+    - If price briefly breaks resistance/support but quickly returns, warn for a possible "fake out".
+    - Always justify your interpretation based on combinations of indicator values, even if the pattern is not directly detected.
+    - If there is a strong bullish confirmation (trend, breakout, volume, or reversal pattern): **strongly recommend BUY**, with clear entry/exit level and risk note.
+    - If there is a strong bearish confirmation (downtrend, breakdown, high volume on sell, reversal to downside): **strongly recommend SELL**, with clear levels and risk note.
+    - Only recommend HOLD if evidence is truly conflicting or unclear—avoid “safe” recommendations.
 
   expected_output: |
-    Generate a detailed report that covers:
-    - Summary of trend and momentum indicators.
-    - Volume analysis.
-    - Identified trading signals and patterns.
-    - Support/resistance levels.
-    - Final investment recommendation with reasons.
-
-  inputs:
-    - stock_symbol
-    - period
-    - start_date
-    - end_date
+    Produce a clear, structured analysis including:
+    - Brief summary of trend and momentum (RSI, MACD, trendline).
+    - Volume analysis and any volume spikes/confirmation.
+    - Key support and resistance levels.
+    - Explicit **Recommendation section** with:
+      - **Buy:** Justification, including all supporting signals, ideal entry, stop-loss, and target price if possible.
+      - **Sell:** Justification, including all supporting signals, ideal entry, stop-loss, and target price if possible.
+      - **Hold:** Only if signals are unclear—explain why not buy/sell.
+    - **Conclusion:** A final, confident, actionable signal for the next period (e.g., "Given strong bullish confirmation from breakout above resistance and surging volume, a BUY is warranted.").
 
 
 macro_task:
   description: |
     You are an expert macroeconomic analyst. Perform a comprehensive macroeconomic analysis using the input "{input}", which can be a country name or a company ticker (resolved to a country).
-
     Your analysis should include:
     - Historical and recent trends of key indicators such as GDP growth, inflation rate, and unemployment rate.
     - Explanation of how these macroeconomic factors impact the country's economic health and financial markets.
     - Highlight any significant recent events or policy changes affecting the economy.
     - Provide a clear and concise buy/hold/sell recommendation for investments related to this country, supported by your macroeconomic insights.
     - Use reliable data ranges where possible, and mention the time periods analyzed.
-
   expected_output: |
     Provide a well-structured summary including:
     - Overview of GDP, inflation, and unemployment trends with relevant numbers and percentage changes.
     - Interpretation of these trends in layman terms.
     - Notable economic developments or risks.
     - Clear investment recommendation (buy, hold, or sell) with justification based on your analysis.
-
-
 conversation_task:
   description: Respond to general financial questions or casual inquiries that don’t match a specific analytical task.
   expected_output: Helpful and polite responses that maintain engagement or guide the user to more specific questions.
