@@ -1,20 +1,22 @@
+
 from crewai import Agent, Crew, Task, Process
 from tools.fundamental_analysis import FundamentalAnalysisTool
+from tools.fundamental_analysis_quarter import FundamentalAnalysisQuarterlyTool
 from tools.technical_analysis import TechnicalAnalysisTool
 from tools.macroeconom_analysis import MacroeconomicTool
 import yaml
 
 class FinancialCrew:
-    def __init__(self, api_key: None):
-        with open("config/agents.yaml") as f:
+    def __init__(self, api_key: str):
+        with open("config/agents.yaml", encoding="utf-8") as f:
             self.agents_config = yaml.safe_load(f)
-        with open("config/tasks.yaml") as f:
+        with open("config/tasks.yaml", encoding="utf-8") as f:
             self.tasks_config = yaml.safe_load(f)
 
     def fundamental(self) -> Agent:
         return Agent(
-            config=self.agents_config['fundamental'],
-            tools=[FundamentalAnalysisTool()],
+            config=self.agents_config['fundamental'],   
+            tools=[FundamentalAnalysisQuarterlyTool()],
             verbose=True,
             allow_delegation=False,
         )
