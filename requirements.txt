@@ -9,3 +9,4 @@ yfinance
 pandas
 pyyaml
 crewai-tools
+selenium
