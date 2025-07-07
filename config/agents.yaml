@@ -13,8 +13,8 @@ intent_router:
     - "ticker": e.g. AAPL, BBRI.JK (null if not present)
     - "country": e.g. Indonesia, US (null if not present)
     - "period": time interval (e.g. "3mo", "6mo", "1y") — only if intent is "technical_analysis"
-    - "start_date": start time (ISO format preferred, e.g. "2025-01-01") — only if intent is "technical_analysis"
-    - "end_date": end time (ISO format preferred, e.g. "2025-06-30") — only if intent is "technical_analysis"
+    - "start_date": start time (ISO format preferred, e.g. "2025-01-01")"
+    - "end_date": end time (ISO format preferred, e.g. "2025-06-30")"
     - "keyword": indicators or metrics, e.g. ["EPS"], ["RSI", "MACD"], ["GDP"]
     - "year": e.g. 2025 — only if intent is "fundamental_analysis" and user input specifies a year
     - "quarter": e.g. 1, 2, 3, 4 — only if intent is "fundamental_analysis" and user input specifies a quarter
@@ -32,7 +32,7 @@ intent_router:
     Output:
     {
       "intents": [
-        {"intent": "fundamental_analysis", "entities": {"ticker": "AAPL", "country": null, "period": null, "start_date": null, "end_date": null, "keyword": null, "year": 2024, "quarter": 1}}
+        {"intent": "fundamental_analysis", "entities": {"ticker": "AAPL", "country": null, "period": null, "start_date": null, "end_date": "2024-03-30", "keyword": null, "year": 2024, "quarter": 1}}
       ]
     }
 
@@ -40,8 +40,17 @@ intent_router:
     Output:
     {
       "intents": [
-        {"intent": "fundamental_analysis", "entities": {"ticker": "BBRI.JK", "country": null, "period": null, "start_date": null, "end_date": null, "keyword": null, "year": 2023, "quarter": 2}},
-        {"intent": "fundamental_analysis", "entities": {"ticker": "BMRI.JK", "country": null, "period": null, "start_date": null, "end_date": null, "keyword": null, "year": 2023, "quarter": 2}}
+        {"intent": "fundamental_analysis", "entities": {"ticker": "BBRI.JK", "country": null, "period": null, "start_date": null, "end_date": "2024-06-30", "keyword": null, "year": 2024, "quarter": 2}},
+        {"intent": "fundamental_analysis", "entities": {"ticker": "BMRI.JK", "country": null, "period": null, "start_date": null, "end_date": "2024-06-30", "keyword": null, "year": 2024, "quarter": 2}}
+      ]
+    }
+
+    User Input: "Conduct fundamental analysis on BBRI.JK and BMRI.JK for 6-30-2024"
+    Output:
+    {
+      "intents": [
+        {"intent": "fundamental_analysis", "entities": {"ticker": "BBRI.JK", "country": null, "period": null, "start_date": null, "end_date": "2024-06-30", "keyword": null, "year": 2024, "quarter": 2}},
+        {"intent": "fundamental_analysis", "entities": {"ticker": "BMRI.JK", "country": null, "period": null, "start_date": null, "end_date": "2024-06-30", "keyword": null, "year": 2024, "quarter": 2}}
       ]
     }
 
