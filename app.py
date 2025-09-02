@@ -167,38 +167,6 @@ def quarter_exists(ticker, year, quarter):
             return True
     return False
 
-def plot_price_chart(ticker: str, period: str = None, start_date: str = None, end_date: str = None):
-    st.write(f"Plotting price chart for {ticker}")
-
-    ticker_obj = yf.Ticker(ticker)
-    if start_date and end_date:
-        df = ticker_obj.history(start=start_date, end=end_date)
-    else:
-        df = ticker_obj.history(period=period or "1y")
-
-    if df.empty:
-        st.warning("History data empty, fallback to yf.download")
-        if start_date and end_date:
-            df = yf.download(ticker, start=start_date, end=end_date)
-        else:
-            df = yf.download(ticker, period=period or "1y")
-
-    if df.empty:
-        st.warning("No data to plot.")
-        return
-
-    if isinstance(df.columns, pd.MultiIndex):
-        df.columns = [' '.join(col).strip() for col in df.columns.values]
-
-    close_cols = [col for col in df.columns if 'Close' in col]
-    if not close_cols:
-        st.warning("No Close price data to plot.")
-        return
-
-    close_col = close_cols[0]
-
-    st.subheader(f"📈 {ticker} Price Chart")
-    st.line_chart(df[close_col])
     
 def run_agent_by_intent(intent_data, crew: FinancialCrew, user_input: str):
     entities = intent_data.get("entities", {})
@@ -472,9 +440,3 @@ if prompt:
                     start_date = entities.get("start_date")
                     end_date = entities.get("end_date")
                     period = entities.get("period") or "1y"
-
-                    if ticker:
-                        if start_date and end_date:
-                            plot_price_chart(ticker, start_date=start_date, end_date=end_date)
-                        else:
-                            plot_price_chart(ticker, period=period)
